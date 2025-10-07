@@ -56,5 +56,9 @@ def get_all():
     return jsonify([u.to_dict() for u in users])
 
 
+import os
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 3000))  # Render assigns this dynamically
+    app.run(host="0.0.0.0", port=port)
+
