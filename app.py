@@ -3,49 +3,49 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
-# --- DATABASE CONFIG ---
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'  # change to 'mysql+pymysql://user:pass@host/db'
+# Configure SQLite (or change URI for MySQL/PostgreSQL)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///messages.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# --- MODEL ---
-class User(db.Model):
+# --- Model ---
+class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
-    email = db.Column(db.String(100), unique=True)
+    sender_id = db.Column(db.String(50))
+    text = db.Column(db.String(255))
 
     def to_dict(self):
-        return {"id": self.id, "name": self.name, "email": self.email}
+        return {"sender_id": self.sender_id, "text": self.text}
 
-# --- CREATE TABLES ---
+# Create table
 with app.app_context():
     db.create_all()
 
-# --- ROUTES ---
-@app.route('/users', methods=['POST'])
-def add_user():
+# --- API Routes ---
+@app.route('/webhook', methods=['POST'])
+def webhook():
     data = request.get_json()
-    new_user = User(name=data['name'], email=data['email'])
-    db.session.add(new_user)
-    db.session.commit()
-    return jsonify({"message": "User added successfully"}), 201
 
-@app.route('/users', methods=['GET'])
-def get_users():
-    users = User.query.all()
-    return jsonify([u.to_dict() for u in users])
+    try:
+        # Extract sender id and text safely
+        entry = data[0]["body"]["entry"][0]
+        message_data = entry["messaging"][0]
+        sender_id = message_data["sender"]["id"]
+        text = message_data["message"]["text"]
 
-@app.route('/users/<int:user_id>', methods=['GET'])
-def get_user_by_id(user_id):
-    user = User.query.get_or_404(user_id)
-    return jsonify(user.to_dict())
+        # Save to database
+        msg = Message(sender_id=sender_id, text=text)
+        db.session.add(msg)
+        db.session.commit()
 
-@app.route('/users/<int:user_id>', methods=['DELETE'])
-def delete_user(user_id):
-    user = User.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
-    return jsonify({"message": "User deleted successfully"})
+        return jsonify({"message": "Saved successfully"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/messages', methods=['GET'])
+def get_messages():
+    messages = Message.query.all()
+    return jsonify([m.to_dict() for m in messages])
 
 if __name__ == '__main__':
     app.run(debug=True)
