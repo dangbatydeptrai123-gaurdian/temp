@@ -223,7 +223,7 @@ def generate_with_genai(question: str, support_docs: List[str]) -> str:
     # If your environment uses a different method signature, adjust model name or parameters accordingly.
     try:
         resp = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-2.0-flash",
             contents=[
                 gtypes.Content(role="user", parts=[gtypes.Part.from_text(system_instructions)]),
                 gtypes.Content(role="user", parts=[gtypes.Part.from_text(context_block)]),
